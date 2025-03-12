@@ -6,7 +6,7 @@ app = Flask(__name__)
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
-uri = "mongodb+srv://abdullahsalam2302:XmazE02XVwUp3NuV@cluster0.kczcr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+uri = "mongodb+srv://JH3617:StudySpace@studyspace.yb9yb.mongodb.net/?retryWrites=true&w=majority&appName=StudySpace"
 
 
 
