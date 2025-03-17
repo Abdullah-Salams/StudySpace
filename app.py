@@ -1,29 +1,13 @@
-from flask import Flask
-
-app = Flask(__name__)
-
-
+from time_provider import get_current_time_est
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
-uri = "mongodb+srv://JH3617:StudySpace@studyspace.yb9yb.mongodb.net/?retryWrites=true&w=majority&appName=StudySpace"
+uri = "mongodb+srv://JH3617:<db_password>@studyspace.yb9yb.mongodb.net/?retryWrites=true&w=majority&appName=StudySpace"
 
+client = MongoClient(uri, server_api=ServerApi('1'))
 
-
-
-@app.route('/')
-def hello_world():
-
-    # Create a new client and connect to the server
-    client = MongoClient(uri, server_api=ServerApi('1'))
-
-    # Send a ping to confirm a successful connection
-    try:
-        client.admin.command('ping')
-        print("Pinged your deployment. You successfully connected to MongoDB!")
-    except Exception as e:
-        print(e)
-
-
-if __name__ == '__main__':
-    app.run()
+try:
+    client.admin.command('ping')
+    print("Deployment pinged. Connected to MongoDB.")
+except Exception as e:
+    print(e)
