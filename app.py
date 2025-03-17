@@ -1,8 +1,13 @@
+from dotenv import load_dotenv
 from time_provider import get_current_time_est
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+load_dotenv()
+import os
 
-uri = "mongodb+srv://JH3617:<db_password>@studyspace.yb9yb.mongodb.net/?retryWrites=true&w=majority&appName=StudySpace"
+uri = os.environ.get('MONGODB_URI')
+if not uri:
+    uri = input("Enter your MongoDB URI: ")
 
 client = MongoClient(uri, server_api=ServerApi('1'))
 
