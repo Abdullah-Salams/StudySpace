@@ -7,7 +7,7 @@ function Landing() {
     const navigate = useNavigate();
 
     //temporary admin password for testing
-    const handeLogin = () => {
+    const handleLogin = () => {
         if(username === "admin" && password === "password") {
             navigate('/bookings');
         }
@@ -15,6 +15,10 @@ function Landing() {
         {
             alert("Invalid Credentials");
         }
+    };
+
+    const handleCreateAccount = () => {
+        navigate('/create-account');
     };
 
     return (
@@ -34,7 +38,9 @@ function Landing() {
                 onChange={(e) => setPassword(e.target.value)}
                 />
             <br />
-            <button onClick={handeLogin}>Login</button>
+            <button onClick={handleLogin}>Login</button>
+            <br /><br />
+            <button onClick={handleCreateAccount}>Create Account</button>
         </div>
     );
 }
