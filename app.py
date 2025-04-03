@@ -57,3 +57,82 @@ def add_booking():
             return jsonify({"message": "Booking added!"})
     except Exception as e:
         return jsonify({"error": str(e)})
+
+@app.route('/register', methods=['POST'])
+def register_user():
+    try:
+        with MongoClient(uri, server_api=ServerApi('1')) as client:
+            db = client["Login"]
+            users_collection = db["Login credentials"]
+            data = request.get_json()
+
+            print("received data for registration:", data)
+
+            email = data.get("email")
+            username = data.get("username")
+            password = data.get("password")
+
+            if not email or not username or not password:
+                print("Missing fields")
+                return jsonify({"message": "All fields are required to be filled!"}), 400
+
+            existing_user = users_collection.find_one({"$or": [{"email": email}, {"username": username}]})
+            if existing_user:
+                print("Errors: Email or Username already exists!")
+                return jsonify({"message": "Email or Username already exists!"}), 400
+
+            result = users_collection.insert_one({
+                "first_name": data.get("first_name"),
+                "last_name": data.get("last_name"),
+                "username": username,
+                "email": email,
+                "password": password
+            })
+
+            print("insert result:", result.inserted_id)
+
+        return jsonify({"message": "User registered!"})
+    except Exception as e:
+        print("backend error:", e)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/login', methods=['POST'])
+def login_user():
+    try:
+        with (MongoClient(uri, server_api=ServerApi('1')) as client):
+            db = client["Login"]
+            users_collection = db["Login credentials"]
+            data = request.get_json()
+
+            print("Login Attempt Data:", data)
+
+            user_identify = data.get("usernameOrEmail")
+            password = data.get("password")
+
+            if not user_identify or not password:
+                print("Missing Credentials")
+                return jsonify({"message": "Username or email and password are required!"}), 400
+
+            user = users_collection.find_one({
+                "$or": [{"email": user_identify}, {"username": user_identify}],
+                "password": password
+            })
+
+            print("found user:", user)
+
+            if not user:
+                print("User not found")
+                return jsonify({"message": "Invalid credentials!"}), 401
+
+            if user.get("password") != password:
+                print("Incorrect Password")
+                return jsonify({"message": "Invalid credentials!"}), 401
+
+        return jsonify({"message": "Login successful!"}), 200
+    except Exception as e:
+        print("backend error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

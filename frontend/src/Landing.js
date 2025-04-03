@@ -7,13 +7,32 @@ function Landing() {
     const navigate = useNavigate();
 
     //temporary admin password for testing
-    const handleLogin = () => {
-        if(username === "admin" && password === "password") {
-            navigate('/bookings');
+    const handleLogin = async () => {
+        if(!username || !password) {
+            alert("Username/email and password are required.");
+            return;
         }
-        else
-        {
-            alert("Invalid Credentials");
+
+        try {
+            console.log("sending login data:", { usernameOrEmail: username, password });
+            const response = await fetch("http://127.0.0.1:5000/login", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({usernameOrEmail: username, password}),
+            });
+
+            const data = await response.json();
+            console.log("response from backend:", data);
+
+            if (!response.ok) {
+                alert(data.message || "Invalid Credentials");
+                return;
+            }
+
+            alert("Login successful! Redirection...");
+            navigate("/bookings");
+        } catch (error) {
+            alert("Error logging in. Try again.");
         }
     };
 
@@ -26,7 +45,7 @@ function Landing() {
             <p>Please Login to navigate to the bookings page</p>
             <input
                 type="text"
-                placeholder="Username"
+                placeholder="Username or Email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
         />
