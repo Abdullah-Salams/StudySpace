@@ -133,6 +133,28 @@ def login_user():
         print("backend error:", e)
         return jsonify({"error": str(e)}), 500
 
+@app.route('/rooms', methods=['GET'])
+def get_rooms():
+    floor = request.args.get('floor')
+    time_slot = request.args.get('time')
+
+    if floor == "1":
+        return jsonify({"rooms": []})
+
+    if not floor or not time_slot:
+        return jsonify({"error": "Missing floor or time slot!"}), 400
+
+    try:
+        with MongoClient(uri, server_api=ServerApi('1')) as client:
+            db = client["study_room_booking"]
+            rooms_collection = db["study_rooms"]
+            rooms = list(rooms_collection.find({
+                "floor": floor,
+                "available_slots" : time_slot,
+            }, {"_id": 0}))
+            return jsonify({"rooms": rooms})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
