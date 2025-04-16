@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 from time_provider import get_current_time_est
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -8,7 +7,9 @@ from flask_cors import CORS
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from dotenv import load_dotenv
+from bson import ObjectId
 import os
+
 
 load_dotenv()
 
@@ -51,11 +52,17 @@ def add_booking():
     try:
         with MongoClient(uri, server_api=ServerApi('1')) as client:
             db = client["study_room_booking"]
-            collection = db["bookings"]
+            bookings_collection = db["bookings"]
+            study_rooms_collection = db["study_rooms"]
             data = request.get_json()
-            collection.insert_one(data)
-            return jsonify({"message": "Booking added!"})
+            print("Received Booking data:", data)
+            booking_result = bookings_collection.insert_one(data)
+            return jsonify({
+                "message": "Booking added and room updated successfully!",
+                "booking_id": str(booking_result.inserted_id)
+            })
     except Exception as e:
+        print("error processing booking:", e)
         return jsonify({"error": str(e)})
 
 @app.route('/register', methods=['POST'])
@@ -110,7 +117,6 @@ def login_user():
             password = data.get("password")
 
             if not user_identify or not password:
-                print("Missing Credentials")
                 return jsonify({"message": "Username or email and password are required!"}), 400
 
             user = users_collection.find_one({
@@ -121,39 +127,101 @@ def login_user():
             print("found user:", user)
 
             if not user:
-                print("User not found")
                 return jsonify({"message": "Invalid credentials!"}), 401
 
             if user.get("password") != password:
-                print("Incorrect Password")
                 return jsonify({"message": "Invalid credentials!"}), 401
 
-        return jsonify({"message": "Login successful!"}), 200
+            fullName = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
+            return jsonify({
+                "message": "Login successful!",
+                "username": user.get("username"),
+                "fullName": fullName,
+            }), 200
+
     except Exception as e:
-        print("backend error:", e)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/rooms', methods=['GET'])
 def get_rooms():
     floor = request.args.get('floor')
     time_slot = request.args.get('time')
+    booking_date = request.args.get('date')
 
     if floor == "1":
         return jsonify({"rooms": []})
 
-    if not floor or not time_slot:
-        return jsonify({"error": "Missing floor or time slot!"}), 400
+    if not floor or not time_slot or not booking_date:
+        return jsonify({"error": "Missing floor, time, or date!"}), 400
 
     try:
         with MongoClient(uri, server_api=ServerApi('1')) as client:
             db = client["study_room_booking"]
             rooms_collection = db["study_rooms"]
-            rooms = list(rooms_collection.find({
-                "floor": floor,
-                "available_slots" : time_slot,
-            }, {"_id": 0}))
-            return jsonify({"rooms": rooms})
+            bookings_collection = db["bookings"]
+
+            rooms = list(rooms_collection.find({"floor": floor}, {"_id": 0}))
+            available_rooms = []
+
+            for room in rooms:
+                default_slots = room.get("available_slots", [])
+                booked_slots_cursor = bookings_collection.find({
+                    "room": room.get("room"),
+                    "floor": floor,
+                    "bookingDate": booking_date,
+                }, {"bookingTime": 1, "_id": 0})
+                booked_slots = [booking["bookingTime"] for booking in booked_slots_cursor]
+
+                available_slots = [slot for slot in default_slots if slot not in booked_slots]
+                room["available_slots"] = available_slots
+
+                if time_slot in available_slots:
+                    available_rooms.append(room)
+
+            return jsonify({"rooms": available_rooms})
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/bookings/<booking_id>', methods=['DELETE'])
+def delete_booking(booking_id):
+    try:
+        with MongoClient(uri, server_api=ServerApi('1')) as client:
+            db = client["study_room_booking"]
+            bookings_collection = db["bookings"]
+            study_rooms_collection = db["study_rooms"]
+            booking = bookings_collection.find_one({"_id": ObjectId(booking_id)})
+            if not booking:
+                return jsonify({"error": "Booking not found!"}), 404
+
+            bookings_collection.delete_one({"_id": ObjectId(booking_id)})
+
+            study_rooms_collection.update_one(
+                {"room": booking.get("room"), "floor": booking.get("floor")},
+                {"$addToSet": {"available_slots": booking.get("bookingTime")}}
+            )
+
+            return jsonify({"message": "Booking deleted!"})
+    except Exception as e:
+        print("backend error:", e)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/user_bookings', methods=['GET'])
+def get_user_bookings():
+    userName = request.args.get("userName")
+    print(f"Received userName: {userName}")
+    if not userName:
+        return jsonify({"error": "Missing userName!"}), 400
+    try:
+        with MongoClient(uri, server_api=ServerApi('1')) as client:
+            db = client["study_room_booking"]
+            bookings_collection = db["bookings"]
+            bookings = list(bookings_collection.find({"userName": userName}))
+            for booking in bookings:
+                booking['_id'] = str(booking['_id'])
+
+            return jsonify({"bookings": bookings})
+    except Exception as e:
+        print("Error fetching user bookings:", e)
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":

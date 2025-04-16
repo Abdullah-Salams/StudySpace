@@ -25,7 +25,8 @@ function Landing() {
                 alert(data.message || "Invalid Credentials");
                 return;
             }
-
+            localStorage.setItem('username', data.username);
+            localStorage.setItem('fullName', data.fullName);
             alert("Login successful!");
             navigate("/bookings");
         } catch (error) {
