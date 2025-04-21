@@ -11,22 +11,20 @@ function Landing() {
             alert("Username/email and password are required.");
             return;
         }
-
         try {
             const response = await fetch("http://127.0.0.1:5000/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ usernameOrEmail: username, password }),
             });
-
             const data = await response.json();
-
             if (!response.ok) {
                 alert(data.message || "Invalid Credentials");
                 return;
             }
             localStorage.setItem('username', data.username);
             localStorage.setItem('fullName', data.fullName);
+            localStorage.setItem('token', data.token);
             alert("Login successful!");
             navigate("/bookings");
         } catch (error) {
