@@ -55,7 +55,7 @@ function NavBar() {
             }}
         >
             <img
-                src="https://previews.us-east-1.widencdn.net/preview/39977711/assets/asset-view/0e314e2d-6729-4171-9332-d3a5a48f18b7/thumbnail/eyJ3Ijo0ODAsImgiOjQ4MCwic2NvcGUiOiJhcHAifQ==?sig.ver=1&sig.keyId=us-east-1.20240821&sig.expires=1745424000&sig=sg1BorHCBksgh0rcUeZab_C9XsujO7AVTPTtCwtKlNc"
+                src="https://previews.us-east-1.widencdn.net/preview/39977711/assets/asset-view/0e314e2d-6729-4171-9332-d3a5a48f18b7/thumbnail/eyJ3Ijo0ODAsImgiOjQ4MCwic2NvcGUiOiJhcHAifQ==?sig.ver=1&sig.keyId=us-east-1.20240821&sig.expires=1745445600&sig=xyKTxA4h23Sr-e_c5uRdn2riPEXQNBr_V0E4xMdU9vQ"
                 alt="Logo"
                 style={{ height: 42, width: 'auto', objectFit: 'contain' }}
             />
