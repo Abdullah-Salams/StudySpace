@@ -1,88 +1,203 @@
 import React, { useState, useEffect } from 'react';
 
 function Profile() {
+    const token = localStorage.getItem('token');
     const [userBookings, setUserBookings] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [username, setUsername] = useState('');
     const [fullName, setFullName] = useState('');
-    const token = localStorage.getItem('token');
+    const [animatingId, setAnimatingId] = useState(null);
 
     useEffect(() => {
-        const storedUsername = localStorage.getItem('username');
-        const storedFullName = localStorage.getItem('fullName');
-        if (storedUsername) {
-            setUsername(storedUsername);
-        }
-        if (storedFullName && storedFullName !== "undefined") {
-            setFullName(storedFullName);
-        }
+        const u = localStorage.getItem('username');
+        const f = localStorage.getItem('fullName');
+        if (u) setUsername(u);
+        if (f && f !== 'undefined') setFullName(f);
     }, []);
 
     useEffect(() => {
-        const fetchUserBookings = async () => {
+        const style = document.createElement('style');
+        style.textContent = `
+        @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+        @keyframes redSweep{0%{background:linear-gradient(145deg,#0077be 0%,#003f5c 100%);color:#fff}100%{background:#d62828;color:#fff}}`;
+        document.head.appendChild(style);
+        return () => document.head.removeChild(style);
+    }, []);
+
+    const spinner = (
+        <div
+            style={{
+                border: '6px solid rgba(255,255,255,0.2)',
+                borderTop: '6px solid #29abe2',
+                borderRadius: '50%',
+                width: 50,
+                height: 50,
+                animation: 'spin 1s linear infinite',
+                margin: '80px auto'
+            }}
+        />
+    );
+
+    useEffect(() => {
+        const fetchBookings = async () => {
             setLoading(true);
             try {
-                const response = await fetch(`http://127.0.0.1:5000/user_bookings?userName=${username}`, { headers: { "Authorization": `Bearer ${token}` } });
-                const data = await response.json();
-                if (response.ok) {
-                    setUserBookings(data.bookings);
-                } else {
-                    setError(data.error || "Error fetching user bookings.");
-                }
-            } catch (err) {
-                setError("Error fetching user bookings.");
+                const resp = await fetch(
+                    `http://127.0.0.1:5000/user_bookings?userName=${username}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                const data = await resp.json();
+                if (resp.ok) {
+                    const now = new Date();
+                    const active = [];
+                    const expiredIds = [];
+                    data.bookings.forEach(b => {
+                        const dt = new Date(`${b.bookingDate}T${b.bookingTime}:00`);
+                        dt > now ? active.push(b) : expiredIds.push(b._id);
+                    });
+                    setUserBookings(active);
+                    if (expiredIds.length) {
+                        await Promise.all(
+                            expiredIds.map(id =>
+                                fetch(`http://127.0.0.1:5000/bookings/${id}`, {
+                                    method: 'DELETE',
+                                    headers: { Authorization: `Bearer ${token}` }
+                                })
+                            )
+                        );
+                    }
+                } else setError(data.error || 'Error.');
+            } catch {
+                setError('Error.');
             } finally {
                 setLoading(false);
             }
         };
-        if (username) {
-            fetchUserBookings();
-        }
+        if (username) fetchBookings();
     }, [username, token]);
 
-    const deleteBooking = async (bookingId) => {
-        if (window.confirm("Are you sure you want to delete this booking?")) {
+    const deleteBooking = async id => {
+        setAnimatingId(id);
+        setTimeout(async () => {
             try {
-                const response = await fetch(`http://127.0.0.1:5000/bookings/${bookingId}`, { method: 'DELETE', headers: { "Authorization": `Bearer ${token}` } });
-                const data = await response.json();
-                if (response.ok && data.message) {
-                    setUserBookings((prevBookings) => prevBookings.filter((booking) => booking._id !== bookingId));
-                } else {
-                    alert(data.error || "Error deleting the booking.");
-                }
-            } catch (err) {
-            }
-        }
+                const resp = await fetch(`http://127.0.0.1:5000/bookings/${id}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (resp.ok)
+                    setUserBookings(prev => prev.filter(b => b._id !== id));
+            } catch {}
+            setAnimatingId(null);
+        }, 900);
+    };
+
+    const cardBase = {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 22,
+        borderRadius: '14px 14px 40px 40px',
+        background: 'linear-gradient(145deg,#0077be 0%,#003f5c 100%)',
+        color: '#fff',
+        marginBottom: 18,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+        transition: 'transform 0.12s'
     };
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h1>{fullName ? `${fullName}'s Bookings` : "My Bookings"}</h1>
-            {loading ? (
-                <p>Loading...</p>
-            ) : error ? (
-                <p style={{ color: 'red' }}>{error}</p>
-            ) : userBookings.length === 0 ? (
-                <p>No bookings found.</p>
-            ) : (
-                <ul style={{ listStyleType: 'none', padding: 0 }}>
-                    {userBookings.map((booking, index) => (
-                        <li key={index} style={{ border: '1px solid #ccc', marginBottom: '10px', padding: '10px', borderRadius: '4px' }}>
-                            <div>
-                                <p><strong>Name:</strong> {booking.fullName ? booking.fullName : booking.userName}</p>
-                                <p><strong>Date:</strong> {booking.bookingDate}</p>
-                                <p><strong>Time:</strong> {booking.bookingTime}</p>
-                                <p><strong>Room:</strong> {booking.room}</p>
-                                <p><strong>Floor:</strong> {booking.floor}</p>
+        <div
+            style={{
+                backgroundImage:
+                    'url("https://bpb-us-e1.wpmucdn.com/sites.nova.edu/dist/c/2/files/2016/01/DSC_00371.jpg")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                minHeight: '100vh',
+                position: 'relative'
+            }}
+        >
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }}></div>
+
+            <div
+                style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    maxWidth: 900,
+                    margin: '0 auto',
+                    padding: '40px 24px'
+                }}
+            >
+                <h1 style={{ textAlign: 'center', marginBottom: 30, fontSize: 36, color: '#fff' }}>
+                    {fullName ? `${fullName}'s Bookings` : 'My Bookings'}
+                </h1>
+
+                {loading ? (
+                    spinner
+                ) : error ? (
+                    <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>
+                ) : userBookings.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: '#fff', fontSize: 18 }}>
+                        No bookings found.
+                    </p>
+                ) : (
+                    userBookings.map(b => {
+                        const deleting = animatingId === b._id;
+                        return (
+                            <div
+                                key={b._id}
+                                style={{
+                                    ...cardBase,
+                                    animation: deleting ? 'redSweep 0.9s forwards' : undefined
+                                }}
+                            >
+                                {deleting ? (
+                                    <div style={{ width: '100%', textAlign: 'center', fontSize: 20 }}>
+                                        Deleting...
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div style={{ lineHeight: 1.4 }}>
+                                            <p style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
+                                                🦈 {b.room} | Floor {b.floor}
+                                            </p>
+                                            <p style={{ margin: 0, fontSize: 17 }}>
+                                                {b.bookingDate} at {b.bookingTime}
+                                            </p>
+                                            <p style={{ margin: 0, fontSize: 15 }}>
+                                                For: {b.fullName || b.userName}
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            onClick={() => deleteBooking(b._id)}
+                                            style={{
+                                                background: 'rgba(255,255,255,0.25)',
+                                                border: '1px solid rgba(255,255,255,0.6)',
+                                                color: '#fff',
+                                                borderRadius: 8,
+                                                padding: '8px 14px',
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                backdropFilter: 'blur(4px)'
+                                            }}
+                                            onMouseEnter={e =>
+                                                (e.currentTarget.style.background =
+                                                    'rgba(255,255,255,0.4)')
+                                            }
+                                            onMouseLeave={e =>
+                                                (e.currentTarget.style.background =
+                                                    'rgba(255,255,255,0.25)')
+                                            }
+                                        >
+                                            Delete
+                                        </button>
+                                    </>
+                                )}
                             </div>
-                            <button onClick={() => deleteBooking(booking._id)} style={{ backgroundColor: '#ff4d4d', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer' }}>
-                                Delete
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
+                        );
+                    })
+                )}
+            </div>
         </div>
     );
 }
