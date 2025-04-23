@@ -55,7 +55,11 @@ def get_bookings():
         with MongoClient(uri, server_api=ServerApi('1')) as client:
             db = client["study_room_booking"]
             collection = db["bookings"]
-            bookings = list(collection.find({}, {"_id": 0}))
+            bookings_cursor = collection.find({})
+            bookings = []
+            for b in bookings_cursor:
+                b['_id'] = str(b['_id'])
+                bookings.append(b)
             return jsonify({"bookings": bookings})
     except Exception as e:
         return jsonify({"error": str(e)})

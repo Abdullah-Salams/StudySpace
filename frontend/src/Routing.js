@@ -9,9 +9,9 @@ import Landing from './Landing';
 import Bookings from './Bookings';
 import CreateAccount from './CreateAccount';
 import Profile from './Profile';
+import Admin from './Admin';
 import NavBar from './NavBar';
 
-// Conditionally render NavBar except on landing & registration pages
 function AppRoutes() {
     const location = useLocation();
     const hideNav =
@@ -29,6 +29,7 @@ function AppRoutes() {
                     path="/profile"
                     element={<Profile currentUser={currentUser} />}
                 />
+                <Route path="/admin" element={<Admin />} />
             </Routes>
         </>
     );
