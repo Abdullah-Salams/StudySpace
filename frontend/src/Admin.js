@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function Admin() {
@@ -21,7 +21,9 @@ function Admin() {
         @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
         @keyframes sweep{0%{background:linear-gradient(145deg,#0077be 0%,#003f5c 100%);color:#fff}100%{background:#28a745;color:#fff}}`;
         document.head.appendChild(style);
-        return () => document.head.removeChild(style);
+        return () => {
+            document.head.removeChild(style);
+        };
     }, []);
 
     const spinner = (
@@ -38,7 +40,7 @@ function Admin() {
         />
     );
 
-    const fetchBookings = async () => {
+    const fetchBookings = useCallback(async () => {
         setLoading(true);
         try {
             const resp = await fetch('http://127.0.0.1:5000/bookings', {
@@ -51,11 +53,11 @@ function Admin() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
 
     useEffect(() => {
         if (token) fetchBookings();
-    }, [token]);
+    }, [token, fetchBookings]);
 
     const removeBooking = async id => {
         setProcessingId(id);

@@ -5,11 +5,11 @@ function Bookings() {
     const currentUser = localStorage.getItem('username');
     const token = localStorage.getItem('token');
 
-    const timeSlots = [
+    const timeSlots = useMemo(() => [
         '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
         '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
         '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
-    ];
+    ], []);
 
     const today = new Date();
     const minDate = today.toISOString().split('T')[0];
@@ -39,17 +39,20 @@ function Bookings() {
     const [submitting, setSubmitting] = useState(false);
 
     const validTimeSlots = useMemo(() => {
+        const now = new Date();
+        const isToday = bookingDate === new Date().toISOString().split('T')[0];
+
         return timeSlots.filter(slot => {
             const slotTime = new Date(`${bookingDate}T${slot}:00`);
-            return slotTime > new Date();
+            return isToday ? slotTime > now : true;
         });
-    }, [bookingDate]);
+    }, [bookingDate, timeSlots]);
 
     useEffect(() => {
         if (!validTimeSlots.includes(selectedTime)) {
             setSelectedTime(validTimeSlots[0] || '');
         }
-    }, [validTimeSlots]);
+    }, [validTimeSlots, selectedTime]);
 
     useEffect(() => {
         const style = document.createElement('style');
@@ -59,7 +62,9 @@ function Bookings() {
                 100% { transform: rotate(360deg); }
             }`;
         document.head.appendChild(style);
-        return () => document.head.removeChild(style);
+        return () => {
+            document.head.removeChild(style);
+        };
     }, []);
 
     const spinnerStyle = {
