@@ -68,8 +68,16 @@ def add_booking():
             db = client["study_room_booking"]
             bookings_collection = db["bookings"]
             data = request.get_json()
+            daily_count = bookings_collection.count_documents(
+                {"userName": data.get("userName"), "bookingDate": data.get("bookingDate")}
+            )
+            if daily_count >= 4:
+                return jsonify({"error": "Daily booking limit reached (4)."}), 400
             booking_result = bookings_collection.insert_one(data)
-            return jsonify({"message": "Booking added and room updated successfully!", "booking_id": str(booking_result.inserted_id)})
+            return jsonify({
+                "message": "Booking added and room updated successfully!",
+                "booking_id": str(booking_result.inserted_id)
+            })
     except Exception as e:
         return jsonify({"error": str(e)})
 
@@ -114,8 +122,17 @@ def login_user():
             if not user:
                 return jsonify({"message": "Invalid credentials!"}), 401
             fullName = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
-            token = jwt.encode({"username": user.get("username"), "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=5)}, SECRET_KEY, algorithm="HS256")
-            return jsonify({"message": "Login successful!", "username": user.get("username"), "fullName": fullName, "token": token}), 200
+            token = jwt.encode(
+                {"username": user.get("username"), "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=5)},
+                SECRET_KEY,
+                algorithm="HS256"
+            )
+            return jsonify({
+                "message": "Login successful!",
+                "username": user.get("username"),
+                "fullName": fullName,
+                "token": token
+            }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -137,7 +154,10 @@ def get_rooms():
             available_rooms = []
             for room in rooms:
                 default_slots = room.get("available_slots", [])
-                booked_slots_cursor = bookings_collection.find({"room": room.get("room"), "floor": floor, "bookingDate": booking_date}, {"bookingTime": 1, "_id": 0})
+                booked_slots_cursor = bookings_collection.find(
+                    {"room": room.get("room"), "floor": floor, "bookingDate": booking_date},
+                    {"bookingTime": 1, "_id": 0}
+                )
                 booked_slots = [booking["bookingTime"] for booking in booked_slots_cursor]
                 available_slots = [slot for slot in default_slots if slot not in booked_slots]
                 room["available_slots"] = available_slots
