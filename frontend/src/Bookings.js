@@ -1,20 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 function Bookings() {
     const currentUserFullName = localStorage.getItem('fullName');
     const currentUser = localStorage.getItem('username');
     const token = localStorage.getItem('token');
-
-    const [selectedFloor, setSelectedFloor] = useState('2');
-    const [selectedTime, setSelectedTime] = useState('08:00');
-    const [bookingDate, setBookingDate] = useState(new Date().toISOString().split('T')[0]);
-    const [availableRooms, setAvailableRooms] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [selectedRoom, setSelectedRoom] = useState(null);
-    const [bookingName, setBookingName] = useState('');
-    const [bookingConfirmation, setBookingConfirmation] = useState(null);
-    const [submitting, setSubmitting] = useState(false);
 
     const timeSlots = [
         '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
@@ -27,6 +16,40 @@ function Bookings() {
     const maxDateObj = new Date();
     maxDateObj.setDate(today.getDate() + 14);
     const maxDate = maxDateObj.toISOString().split('T')[0];
+
+    const initialBookingDate = minDate;
+    const getFirstFutureSlot = dateStr => {
+        const now = new Date();
+        for (const slot of timeSlots) {
+            const slotTime = new Date(`${dateStr}T${slot}:00`);
+            if (slotTime > now) return slot;
+        }
+        return timeSlots[0];
+    };
+
+    const [bookingDate, setBookingDate] = useState(initialBookingDate);
+    const [selectedTime, setSelectedTime] = useState(getFirstFutureSlot(initialBookingDate));
+    const [selectedFloor, setSelectedFloor] = useState('2');
+    const [availableRooms, setAvailableRooms] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [bookingName, setBookingName] = useState('');
+    const [bookingConfirmation, setBookingConfirmation] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
+
+    const validTimeSlots = useMemo(() => {
+        return timeSlots.filter(slot => {
+            const slotTime = new Date(`${bookingDate}T${slot}:00`);
+            return slotTime > new Date();
+        });
+    }, [bookingDate]);
+
+    useEffect(() => {
+        if (!validTimeSlots.includes(selectedTime)) {
+            setSelectedTime(validTimeSlots[0] || '');
+        }
+    }, [validTimeSlots]);
 
     useEffect(() => {
         const style = document.createElement('style');
@@ -50,6 +73,7 @@ function Bookings() {
     };
 
     const fetchRooms = async (floor, time, date) => {
+        if (!time) return;
         setSelectedRoom(null);
         setLoading(true);
         setError(null);
@@ -99,7 +123,6 @@ function Bookings() {
                 body: JSON.stringify(payload)
             });
             const data = await resp.json();
-
             if (resp.ok) {
                 setBookingConfirmation(
                     `Booking Successful!\n\nName: ${effectiveName}\nDate: ${bookingDate}\nTime: ${selectedTime}\nRoom: ${selectedRoom.room}`
@@ -169,7 +192,6 @@ function Bookings() {
                     Study Room Bookings
                 </h1>
 
-                {/* Controls */}
                 <div
                     style={{
                         display: 'flex',
@@ -204,10 +226,13 @@ function Bookings() {
                             value={selectedTime}
                             onChange={e => setSelectedTime(e.target.value)}
                             style={{ ...controlStyle, marginLeft: 12 }}
+                            disabled={validTimeSlots.length === 0}
                         >
-                            {timeSlots.map(slot => (
-                                <option key={slot}>{slot}</option>
-                            ))}
+                            {validTimeSlots.length === 0 ? (
+                                <option>No slots</option>
+                            ) : (
+                                validTimeSlots.map(slot => <option key={slot}>{slot}</option>)
+                            )}
                         </select>
                     </div>
 
@@ -227,7 +252,6 @@ function Bookings() {
                     </div>
                 </div>
 
-                {/* Available Rooms */}
                 <div>
                     <h2 style={{ textAlign: 'center', fontSize: 28, marginBottom: 15, color: '#fff' }}>
                         Available Rooms
@@ -239,7 +263,7 @@ function Bookings() {
                         <p style={{ color: 'red', textAlign: 'center', fontSize: 18 }}>{error}</p>
                     ) : availableRooms.length === 0 ? (
                         <p style={{ textAlign: 'center', fontSize: 18, color: '#fff' }}>
-                            No available rooms on Floor {selectedFloor} at {selectedTime}.
+                            No available rooms on Floor {selectedFloor} at {selectedTime || 'this time'}.
                         </p>
                     ) : (
                         <div
@@ -291,7 +315,6 @@ function Bookings() {
                     )}
                 </div>
 
-                {/* Booking form */}
                 {selectedRoom && (
                     <div
                         style={{
@@ -312,7 +335,6 @@ function Bookings() {
                             Floor {selectedFloor} &nbsp;|&nbsp; {bookingDate} &nbsp;|&nbsp;{' '}
                             {selectedTime}
                         </p>
-
                         <form onSubmit={handleBookingSubmit}>
                             {currentUser ? (
                                 <p style={{ textAlign: 'center', fontSize: 17, marginBottom: 18 }}>
@@ -345,7 +367,6 @@ function Bookings() {
                                     />
                                 </div>
                             )}
-
                             <button
                                 type="submit"
                                 disabled={submitting}

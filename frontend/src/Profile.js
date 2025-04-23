@@ -16,15 +16,11 @@ function Profile() {
         if (f && f !== 'undefined') setFullName(f);
     }, []);
 
-    /* Spinner keyframes once */
     useEffect(() => {
         const style = document.createElement('style');
         style.textContent = `
-        @keyframes spin { 0%{transform:rotate(0)}100%{transform:rotate(360deg)} }
-        @keyframes redSweep {
-            0% { background: linear-gradient(145deg,#0077be 0%,#003f5c 100%); color:#fff; }
-            100% { background:#d62828; color:#fff; }
-        }`;
+        @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+        @keyframes redSweep{0%{background:linear-gradient(145deg,#0077be 0%,#003f5c 100%);color:#fff}100%{background:#d62828;color:#fff}}`;
         document.head.appendChild(style);
         return () => document.head.removeChild(style);
     }, []);
@@ -52,7 +48,26 @@ function Profile() {
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 const data = await resp.json();
-                resp.ok ? setUserBookings(data.bookings) : setError(data.error || 'Error.');
+                if (resp.ok) {
+                    const now = new Date();
+                    const active = [];
+                    const expiredIds = [];
+                    data.bookings.forEach(b => {
+                        const dt = new Date(`${b.bookingDate}T${b.bookingTime}:00`);
+                        dt > now ? active.push(b) : expiredIds.push(b._id);
+                    });
+                    setUserBookings(active);
+                    if (expiredIds.length) {
+                        await Promise.all(
+                            expiredIds.map(id =>
+                                fetch(`http://127.0.0.1:5000/bookings/${id}`, {
+                                    method: 'DELETE',
+                                    headers: { Authorization: `Bearer ${token}` }
+                                })
+                            )
+                        );
+                    }
+                } else setError(data.error || 'Error.');
             } catch {
                 setError('Error.');
             } finally {
@@ -70,8 +85,7 @@ function Profile() {
                     method: 'DELETE',
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                const data = await resp.json();
-                if (resp.ok && data.message)
+                if (resp.ok)
                     setUserBookings(prev => prev.filter(b => b._id !== id));
             } catch {}
             setAnimatingId(null);
