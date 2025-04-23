@@ -1,149 +1,187 @@
 import React, { useState, useEffect } from 'react';
 
 function Profile() {
+    const token = localStorage.getItem('token');
     const [userBookings, setUserBookings] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [username, setUsername] = useState('');
     const [fullName, setFullName] = useState('');
-    const token = localStorage.getItem('token');
+    const [animatingId, setAnimatingId] = useState(null);
 
     useEffect(() => {
-        const storedUsername = localStorage.getItem('username');
-        const storedFullName = localStorage.getItem('fullName');
-        if (storedUsername) setUsername(storedUsername);
-        if (storedFullName && storedFullName !== 'undefined') setFullName(storedFullName);
+        const u = localStorage.getItem('username');
+        const f = localStorage.getItem('fullName');
+        if (u) setUsername(u);
+        if (f && f !== 'undefined') setFullName(f);
     }, []);
 
+    /* Spinner keyframes once */
     useEffect(() => {
-        const fetchUserBookings = async () => {
+        const style = document.createElement('style');
+        style.textContent = `
+        @keyframes spin { 0%{transform:rotate(0)}100%{transform:rotate(360deg)} }
+        @keyframes redSweep {
+            0% { background: linear-gradient(145deg,#0077be 0%,#003f5c 100%); color:#fff; }
+            100% { background:#d62828; color:#fff; }
+        }`;
+        document.head.appendChild(style);
+        return () => document.head.removeChild(style);
+    }, []);
+
+    const spinner = (
+        <div
+            style={{
+                border: '6px solid rgba(255,255,255,0.2)',
+                borderTop: '6px solid #29abe2',
+                borderRadius: '50%',
+                width: 50,
+                height: 50,
+                animation: 'spin 1s linear infinite',
+                margin: '80px auto'
+            }}
+        />
+    );
+
+    useEffect(() => {
+        const fetchBookings = async () => {
             setLoading(true);
             try {
-                const response = await fetch(
+                const resp = await fetch(
                     `http://127.0.0.1:5000/user_bookings?userName=${username}`,
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
-                const data = await response.json();
-                response.ok ? setUserBookings(data.bookings) : setError(data.error || 'Error fetching user bookings.');
+                const data = await resp.json();
+                resp.ok ? setUserBookings(data.bookings) : setError(data.error || 'Error.');
             } catch {
-                setError('Error fetching user bookings.');
+                setError('Error.');
             } finally {
                 setLoading(false);
             }
         };
-        if (username) fetchUserBookings();
+        if (username) fetchBookings();
     }, [username, token]);
 
     const deleteBooking = async id => {
-        if (!window.confirm('Are you sure you want to delete this booking?')) return;
-        try {
-            const response = await fetch(`http://127.0.0.1:5000/bookings/${id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (response.ok && data.message) setUserBookings(prev => prev.filter(b => b._id !== id));
-            else alert(data.error || 'Error deleting the booking.');
-        } catch {
-            /* ignore */
-        }
+        setAnimatingId(id);
+        setTimeout(async () => {
+            try {
+                const resp = await fetch(`http://127.0.0.1:5000/bookings/${id}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await resp.json();
+                if (resp.ok && data.message)
+                    setUserBookings(prev => prev.filter(b => b._id !== id));
+            } catch {}
+            setAnimatingId(null);
+        }, 900);
     };
 
-    const pageStyle = {
-        minHeight: '100vh',
-        padding: '40px 20px',
-        background: 'linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)',
+    const cardBase = {
         display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start'
-    };
-
-    const cardStyle = {
-        width: '100%',
-        maxWidth: '900px',
-        background: 'rgba(255,255,255,0.9)',
-        borderRadius: '12px',
-        padding: '30px',
-        boxShadow: '0 8px 20px rgba(0,0,0,0.15)'
-    };
-
-    const buttonBase = {
-        background: 'linear-gradient(45deg,#ff6b6b 0%,#ff4d4d 100%)',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 22,
+        borderRadius: '14px 14px 40px 40px',
+        background: 'linear-gradient(145deg,#0077be 0%,#003f5c 100%)',
         color: '#fff',
-        border: 'none',
-        padding: '10px 16px',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontWeight: '600',
-        transition: 'background 0.25s, transform 0.15s'
+        marginBottom: 18,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+        transition: 'transform 0.12s'
     };
 
     return (
-        <div style={pageStyle}>
-            <div style={cardStyle}>
-                <h1 style={{ marginBottom: '25px', textAlign: 'center' }}>
+        <div
+            style={{
+                backgroundImage:
+                    'url("https://bpb-us-e1.wpmucdn.com/sites.nova.edu/dist/c/2/files/2016/01/DSC_00371.jpg")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                minHeight: '100vh',
+                position: 'relative'
+            }}
+        >
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }}></div>
+
+            <div
+                style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    maxWidth: 900,
+                    margin: '0 auto',
+                    padding: '40px 24px'
+                }}
+            >
+                <h1 style={{ textAlign: 'center', marginBottom: 30, fontSize: 36, color: '#fff' }}>
                     {fullName ? `${fullName}'s Bookings` : 'My Bookings'}
                 </h1>
 
                 {loading ? (
-                    <p style={{ textAlign: 'center' }}>Loading...</p>
+                    spinner
                 ) : error ? (
                     <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>
                 ) : userBookings.length === 0 ? (
-                    <p style={{ textAlign: 'center' }}>No bookings found.</p>
+                    <p style={{ textAlign: 'center', color: '#fff', fontSize: 18 }}>
+                        No bookings found.
+                    </p>
                 ) : (
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                        {userBookings.map(booking => (
-                            <li
-                                key={booking._id}
+                    userBookings.map(b => {
+                        const deleting = animatingId === b._id;
+                        return (
+                            <div
+                                key={b._id}
                                 style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '8px',
-                                    padding: '15px 20px',
-                                    marginBottom: '15px',
-                                    background: '#f7f9fc'
+                                    ...cardBase,
+                                    animation: deleting ? 'redSweep 0.9s forwards' : undefined
                                 }}
                             >
-                                <div>
-                                    <p style={{ margin: 0 }}>
-                                        <strong>Name:</strong> {booking.fullName || booking.userName}
-                                    </p>
-                                    <p style={{ margin: 0 }}>
-                                        <strong>Date:</strong> {booking.bookingDate}
-                                    </p>
-                                    <p style={{ margin: 0 }}>
-                                        <strong>Time:</strong> {booking.bookingTime}
-                                    </p>
-                                    <p style={{ margin: 0 }}>
-                                        <strong>Room:</strong> {booking.room}
-                                    </p>
-                                    <p style={{ margin: 0 }}>
-                                        <strong>Floor:</strong> {booking.floor}
-                                    </p>
-                                </div>
+                                {deleting ? (
+                                    <div style={{ width: '100%', textAlign: 'center', fontSize: 20 }}>
+                                        Deleting...
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div style={{ lineHeight: 1.4 }}>
+                                            <p style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
+                                                🦈 {b.room} | Floor {b.floor}
+                                            </p>
+                                            <p style={{ margin: 0, fontSize: 17 }}>
+                                                {b.bookingDate} at {b.bookingTime}
+                                            </p>
+                                            <p style={{ margin: 0, fontSize: 15 }}>
+                                                For: {b.fullName || b.userName}
+                                            </p>
+                                        </div>
 
-                                <button
-                                    onClick={() => deleteBooking(booking._id)}
-                                    style={buttonBase}
-                                    onMouseEnter={e =>
-                                        (e.currentTarget.style.background =
-                                            'linear-gradient(45deg,#ff8e8e 0%,#ff6b6b 100%)')
-                                    }
-                                    onMouseLeave={e =>
-                                        (e.currentTarget.style.background =
-                                            'linear-gradient(45deg,#ff6b6b 0%,#ff4d4d 100%)')
-                                    }
-                                    onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.95)')}
-                                    onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
-                                >
-                                    Delete
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+                                        <button
+                                            onClick={() => deleteBooking(b._id)}
+                                            style={{
+                                                background: 'rgba(255,255,255,0.25)',
+                                                border: '1px solid rgba(255,255,255,0.6)',
+                                                color: '#fff',
+                                                borderRadius: 8,
+                                                padding: '8px 14px',
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                backdropFilter: 'blur(4px)'
+                                            }}
+                                            onMouseEnter={e =>
+                                                (e.currentTarget.style.background =
+                                                    'rgba(255,255,255,0.4)')
+                                            }
+                                            onMouseLeave={e =>
+                                                (e.currentTarget.style.background =
+                                                    'rgba(255,255,255,0.25)')
+                                            }
+                                        >
+                                            Delete
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })
                 )}
             </div>
         </div>
