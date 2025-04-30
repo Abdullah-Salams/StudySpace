@@ -10,6 +10,7 @@ import os
 import datetime
 import jwt
 from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 app = Flask(__name__)
@@ -94,18 +95,19 @@ def register_user():
             data = request.get_json()
             email = data.get("email")
             username = data.get("username")
-            password = data.get("password")
-            if not email or not username or not password:
+            raw_password = data.get("password")
+            if not email or not username or not raw_password:
                 return jsonify({"message": "All fields are required to be filled!"}), 400
             existing_user = users_collection.find_one({"$or": [{"email": email}, {"username": username}]})
             if existing_user:
                 return jsonify({"message": "Email or Username already exists!"}), 400
+            hashed = generate_password_hash(raw_password)
             users_collection.insert_one({
                 "first_name": data.get("first_name"),
                 "last_name": data.get("last_name"),
                 "username": username,
                 "email": email,
-                "password": password
+                "password": hashed
             })
         return jsonify({"message": "User registered!"})
     except Exception as e:
@@ -120,10 +122,8 @@ def login_user():
             data = request.get_json()
             user_identify = data.get("usernameOrEmail")
             password = data.get("password")
-            if not user_identify or not password:
-                return jsonify({"message": "Username or email and password are required!"}), 400
-            user = users_collection.find_one({"$or": [{"email": user_identify}, {"username": user_identify}], "password": password})
-            if not user:
+            user = users_collection.find_one({"$or": [{"email": user_identify}, {"username": user_identify}]})
+            if not user or not check_password_hash(user["password"], password):
                 return jsonify({"message": "Invalid credentials!"}), 401
             fullName = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
             token = jwt.encode(
