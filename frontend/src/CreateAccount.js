@@ -122,6 +122,7 @@ export default CreateAccount; */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+//holds form imput values.
 function CreateAccount() {
     const [formData, setFormData] = useState({
         first_name: "",
@@ -132,22 +133,27 @@ function CreateAccount() {
         confirm_password: "",
     });
 
+    //holds error messages
     const [error, setError] = useState("");
     const navigate = useNavigate();
 
+    //uupdates formData if any input changes.
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    //submits handler for registration form.
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
 
+        //password confirmation chekc.
         if (formData.password !== formData.confirm_password) {
             setError("Passwords do not match");
             return;
         }
 
+        //sends post request to /register endpoint
         try {
             const response = await fetch("http://127.0.0.1:5000/register", {
                 method: "POST",
@@ -162,6 +168,7 @@ function CreateAccount() {
                 return;
             }
 
+            //if works alert and navigates back to login.
             alert("Registration Successful! Redirecting to Login.");
             navigate("/");
         } catch (err) {

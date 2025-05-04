@@ -20,6 +20,7 @@ function Landing() {
         return () => document.head.removeChild(style);
     }, []);
 
+    //loading spinner
     const spinnerStyle = {
         border: '4px solid rgba(0,0,0,0.1)',
         borderTop: '4px solid #1e90ff',
@@ -30,6 +31,7 @@ function Landing() {
         margin: '25px auto'
     };
 
+    //base button styles for login/create actions
     const btnBase = {
         width: '100%',
         padding: '12px',
@@ -42,6 +44,7 @@ function Landing() {
         transition: 'background 0.25s, transform 0.15s'
     };
 
+    //handles login API call.
     const handleLogin = async () => {
         if (!username || !password) {
             setMessage({ text: 'Username/email and password are required.', type: 'error' });
@@ -50,6 +53,7 @@ function Landing() {
         setLoading(true);
         setMessage({ text: '', type: '' });
         try {
+            //post to login endpoint.
             const resp = await fetch('http://127.0.0.1:5000/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -59,6 +63,7 @@ function Landing() {
             if (!resp.ok) {
                 setMessage({ text: data.message || 'Invalid credentials.', type: 'error' });
             } else {
+                //if it works, stores credentials and redirects user.
                 localStorage.setItem('username', data.username);
                 localStorage.setItem('fullName', data.fullName);
                 localStorage.setItem('token', data.token);
@@ -72,6 +77,7 @@ function Landing() {
         }
     };
 
+    //navigates to account creation page.
     const handleCreateAccount = () => navigate('/create-account');
 
     return (

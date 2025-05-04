@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
+//gets users full name from local storage, if not available it defaults to profile
 function NavBar() {
     const navigate = useNavigate();
     const fullName = localStorage.getItem('fullName');
     const displayName = fullName && fullName !== 'undefined' ? fullName : 'Profile';
 
+    //tracks whether the dropdown is open and wrapper div which detects clicks outside of it.
     const [open, setOpen] = useState(false);
     const wrapperRef = useRef(null);
 
+    //closes dropdown when clicking outside of it.
     useEffect(() => {
         const handleDocClick = e => {
             if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
@@ -17,6 +20,7 @@ function NavBar() {
         return () => document.removeEventListener('mousedown', handleDocClick);
     }, []);
 
+    //clears the auth data and redirects user to landing page
     const handleLogout = () => {
         localStorage.removeItem('username');
         localStorage.removeItem('fullName');
@@ -25,6 +29,7 @@ function NavBar() {
         setOpen(false);
     };
 
+    //button style used for bookings page.
     const btnBase = {
         padding: '8px 18px',
         border: '1px solid rgba(255,255,255,0.6)',

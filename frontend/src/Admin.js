@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function Admin() {
+    //retrieves auth token and username from local storage.
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
     const navigate = useNavigate();
@@ -11,10 +12,12 @@ function Admin() {
     const [error, setError] = useState(null);
     const [processingId, setProcessingId] = useState(null);
 
+    //redirects non admin users back to landing page.
     useEffect(() => {
         if (username !== 'admin') navigate('/');
     }, [username, navigate]);
 
+    //injects spinner and sweep animations.
     useEffect(() => {
         const style = document.createElement('style');
         style.textContent = `
@@ -26,6 +29,7 @@ function Admin() {
         };
     }, []);
 
+    //spinner animation.
     const spinner = (
         <div
             style={{
@@ -40,6 +44,7 @@ function Admin() {
         />
     );
 
+    //fetches all bookings from backend.
     const fetchBookings = useCallback(async () => {
         setLoading(true);
         try {
@@ -55,10 +60,12 @@ function Admin() {
         }
     }, [token]);
 
+    //triggers data load when token is available.
     useEffect(() => {
         if (token) fetchBookings();
     }, [token, fetchBookings]);
 
+    //handler to delete or check a bookin.
     const removeBooking = async id => {
         setProcessingId(id);
         try {
@@ -67,10 +74,12 @@ function Admin() {
                 headers:{Authorization:`Bearer ${token}`}
             });
             if (resp.ok) setBookings(prev => prev.filter(b => b._id !== id));
+            //remove from local list.
         } catch {}
         setProcessingId(null);
     };
 
+    //base style cards for each booking card.
     const cardBase = {
         padding:20,
         borderRadius:'14px 14px 40px 40px',

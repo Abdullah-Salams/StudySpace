@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 function Profile() {
+    //fetches auth token from local storage for the API call.
     const token = localStorage.getItem('token');
     const [userBookings, setUserBookings] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -9,6 +10,7 @@ function Profile() {
     const [fullName, setFullName] = useState('');
     const [animatingId, setAnimatingId] = useState(null);
 
+    //gets username and fullname from local storage.
     useEffect(() => {
         const u = localStorage.getItem('username');
         const f = localStorage.getItem('fullName');
@@ -16,6 +18,7 @@ function Profile() {
         if (f && f !== 'undefined') setFullName(f);
     }, []);
 
+    //spin animations.
     useEffect(() => {
         const style = document.createElement('style');
         style.textContent = `
@@ -25,6 +28,7 @@ function Profile() {
         return () => document.head.removeChild(style);
     }, []);
 
+    //spinner animation during loading.
     const spinner = (
         <div
             style={{
@@ -39,6 +43,7 @@ function Profile() {
         />
     );
 
+    //fetches username bookings whenever username, token is set
     useEffect(() => {
         const fetchBookings = async () => {
             setLoading(true);
@@ -52,11 +57,14 @@ function Profile() {
                     const now = new Date();
                     const active = [];
                     const expiredIds = [];
+                    //seperates active vs expired bookings.
                     data.bookings.forEach(b => {
                         const dt = new Date(`${b.bookingDate}T${b.bookingTime}:00`);
                         dt > now ? active.push(b) : expiredIds.push(b._id);
                     });
+                    //updates
                     setUserBookings(active);
+                    //cleans expired bookings in backend.
                     if (expiredIds.length) {
                         await Promise.all(
                             expiredIds.map(id =>
@@ -77,6 +85,7 @@ function Profile() {
         if (username) fetchBookings();
     }, [username, token]);
 
+    //delete a single booking with animation delay.
     const deleteBooking = async id => {
         setAnimatingId(id);
         setTimeout(async () => {
@@ -86,12 +95,14 @@ function Profile() {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (resp.ok)
+                    //removes from ui list.
                     setUserBookings(prev => prev.filter(b => b._id !== id));
             } catch {}
             setAnimatingId(null);
         }, 900);
     };
 
+    //base styles for each booking card/
     const cardBase = {
         display: 'flex',
         justifyContent: 'space-between',

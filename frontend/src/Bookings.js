@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
 function Bookings() {
+    //gets user info and auth info.
     const currentUserFullName = localStorage.getItem('fullName');
     const currentUser = localStorage.getItem('username');
     const token = localStorage.getItem('token');
 
+    //all time slots available for booking
     const timeSlots = useMemo(() => [
         '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
         '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
         '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
     ], []);
 
+    //computes date bounds from today to 2 weeks ahead.
     const today = new Date();
     const minDate = today.toISOString().split('T')[0];
     const maxDateObj = new Date();
@@ -38,6 +41,7 @@ function Bookings() {
     const [bookingConfirmation, setBookingConfirmation] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
+    //filter out past slots for whenever date is.
     const validTimeSlots = useMemo(() => {
         const now = new Date();
         const isToday = bookingDate === new Date().toISOString().split('T')[0];
@@ -48,12 +52,14 @@ function Bookings() {
         });
     }, [bookingDate, timeSlots]);
 
+    //ensure selectedtime stays valid when the timeslot changes.
     useEffect(() => {
         if (!validTimeSlots.includes(selectedTime)) {
             setSelectedTime(validTimeSlots[0] || '');
         }
     }, [validTimeSlots, selectedTime]);
 
+    //spinner animation.
     useEffect(() => {
         const style = document.createElement('style');
         style.textContent = `
@@ -67,6 +73,7 @@ function Bookings() {
         };
     }, []);
 
+    //spinner animation
     const spinnerStyle = {
         border: '6px solid rgba(255,255,255,0.2)',
         borderTop: '6px solid #29abe2',
@@ -77,6 +84,7 @@ function Bookings() {
         margin: '60px auto'
     };
 
+    //fetches available rooms from backend meeting the requirements.
     const fetchRooms = async (floor, time, date) => {
         if (!time) return;
         setSelectedRoom(null);
@@ -95,14 +103,17 @@ function Bookings() {
         setLoading(false);
     };
 
+    //regets rooms whenever a requirement changes.
     useEffect(() => {
         fetchRooms(selectedFloor, selectedTime, bookingDate);
     }, [selectedFloor, selectedTime, bookingDate]);
 
+    //handles booking form submissions.
     const handleBookingSubmit = async e => {
         e.preventDefault();
         if (!selectedRoom) return;
 
+        //used to store fullname or fallbacks to its default.
         const effectiveName =
             currentUserFullName && currentUserFullName !== 'undefined'
                 ? currentUserFullName
@@ -129,6 +140,7 @@ function Bookings() {
             });
             const data = await resp.json();
             if (resp.ok) {
+                //shows confirmation and refreshes the new list.
                 setBookingConfirmation(
                     `Booking Successful!\n\nName: ${effectiveName}\nDate: ${bookingDate}\nTime: ${selectedTime}\nRoom: ${selectedRoom.room}`
                 );
@@ -144,6 +156,7 @@ function Bookings() {
         setSubmitting(false);
     };
 
+    //shared control styles.
     const controlStyle = {
         fontSize: 16,
         padding: '10px 14px',
@@ -154,6 +167,7 @@ function Bookings() {
         boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
     };
 
+    //base styles for shark cards.
     const sharkCardBase = {
         padding: 28,
         borderRadius: '14px 14px 40px 40px',
