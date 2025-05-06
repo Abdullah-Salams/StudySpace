@@ -1,4 +1,3 @@
-from time_provider import get_current_time_est
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from time_provider import *
